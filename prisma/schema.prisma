@@ -1,0 +1,188 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  caregiver
+  nurse
+  partner_admin
+  ops
+}
+
+enum ContractStatus {
+  pending
+  active
+  suspended
+}
+
+enum TrainingStatus {
+  not_started
+  in_progress
+  completed
+}
+
+enum AssignmentStatus {
+  active
+  reassigned
+  ended
+}
+
+enum Verdict {
+  monitor
+  call_nurse
+  er
+}
+
+enum EntryType {
+  medication
+  mood
+  symptom
+  appointment
+}
+
+enum ConsentType {
+  data_processing
+  triage_disclaimer
+  family_sharing
+}
+
+model User {
+  id               String   @id @default(cuid())
+  email            String   @unique
+  password         String? // Hashed, used if not using OAuth
+  name             String?
+  role             Role
+  familyId         String?
+  partnerAgencyId  String?
+  family           Family?           @relation(fields: [familyId], references: [id])
+  partnerAgency    PartnerAgency?    @relation(fields: [partnerAgencyId], references: [id])
+  consentRecords   ConsentRecord[]
+  created_at       DateTime @default(now())
+}
+
+model Family {
+  id                   String              @id @default(cuid())
+  primaryCaregiverId   String?
+  address              String?
+  createdAt            DateTime            @default(now())
+  caregiver            User?               @relation(fields: [primaryCaregiverId], references: [id])
+  members              FamilyMember[]
+  assignments          FamilyNurseAssignment[]
+  triageSessions       TriageSession[]
+  careLogEntries       CareLogEntry[]
+  messages             Message[]
+  weeklySummaries      WeeklySummary[]
+  careProfile          CareProfile?
+}
+
+model FamilyMember {
+  id                  String   @id @default(cuid())
+  familyId            String
+  invitedByCaregiverId String
+  name                String
+  relationship        String
+  notificationPrefs   Json?
+  family              Family   @relation(fields: [familyId], references: [id])
+}
+
+model PartnerAgency {
+  id                           String           @id @default(cuid())
+  legalName                    String
+  versorgungsvertragReference  String?
+  address                      String?
+  contactPerson                String?
+  contractStatus               ContractStatus   @default(pending)
+  liabilityCoverageConfirmed   Boolean          @default(false)
+  verifiedByOpsId              String?
+  verifiedAt                   DateTime?
+  nurses                       User[]
+}
+
+model FamilyNurseAssignment {
+  id               String           @id @default(cuid())
+  familyId         String
+  nurseId          String
+  partnerAgencyId  String
+  assignedAt       DateTime         @default(now())
+  status           AssignmentStatus @default(active)
+  family           Family           @relation(fields: [familyId], references: [id])
+}
+
+model TriageSession {
+  id                String   @id @default(cuid())
+  familyId          String
+  caregiverId       String
+  symptomCategoryId String
+  answers           Json
+  verdict           Verdict
+  triggeredRuleId   String?
+  treeVersion       String
+  createdAt         DateTime @default(now())
+  routedToNurseId   String?
+  family            Family   @relation(fields: [familyId], references: [id])
+}
+
+model CareLogEntry {
+  id                    String   @id @default(cuid())
+  familyId              String
+  caregiverId           String
+  entryType             EntryType
+  content               String
+  createdAt             DateTime @default(now())
+  acknowledgedByNurseId String?
+  acknowledgedAt        DateTime?
+  family                Family   @relation(fields: [familyId], references: [id])
+}
+
+model Message {
+  id          String   @id @default(cuid())
+  familyId    String
+  senderId    String
+  senderRole  Role
+  content     String
+  createdAt   DateTime @default(now())
+  readAt      DateTime?
+  family      Family   @relation(fields: [familyId], references: [id])
+}
+
+model WeeklySummary {
+  id               String   @id @default(cuid())
+  familyId         String
+  weekStart        DateTime
+  generatedContent String
+  sharedWith       String[]
+  family           Family   @relation(fields: [familyId], references: [id])
+}
+
+model CareProfile {
+  id                String   @id @default(cuid())
+  familyId          String   @unique
+  chronicConditions String[]
+  allergies         String[]
+  medications       String[]
+  family            Family   @relation(fields: [familyId], references: [id])
+}
+
+model ConsentRecord {
+  id          String      @id @default(cuid())
+  userId      String
+  consentType ConsentType
+  version     String
+  grantedAt   DateTime    @default(now())
+  user        User        @relation(fields: [userId], references: [id])
+}
+
+model AuditLogEntry {
+  id            String   @id @default(cuid())
+  actorId       String
+  actorRole     Role
+  action        String
+  targetEntity  String
+  targetId      String
+  timestamp     DateTime @default(now())
+}

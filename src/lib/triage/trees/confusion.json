@@ -1,0 +1,85 @@
+{
+  "symptom_category_id": "confusion_sudden_onset",
+  "display_name": "Sudden confusion or behavior change",
+  "version": "1.0.0",
+  "entry_questions": [
+    {
+      "id": "q1_onset",
+      "text": "Did this start suddenly (today or yesterday), or has it been building for weeks?",
+      "type": "single_select",
+      "options": [
+        { "value": "gradual", "next": "q_gradual_branch" },
+        { "value": "sudden", "next": "q2_alertness" }
+      ]
+    },
+    {
+      "id": "q_gradual_branch",
+      "text": "If gradual, route to lower-urgency 'gradual cognitive change' branch.",
+      "type": "single_select",
+      "options": [
+        { "value": "ok", "verdict": "call_nurse", "explanation_key": "gradual_confusion" }
+      ]
+    },
+    {
+      "id": "q2_alertness",
+      "text": "Right now, is [name] hard to wake up, or much less alert than usual?",
+      "type": "single_select",
+      "options": [
+        { "value": "yes", "verdict": "er", "explanation_key": "confusion_er_alertness" },
+        { "value": "no", "next": "q3_conversation" }
+      ]
+    },
+    {
+      "id": "q3_conversation",
+      "text": "Can they follow a simple instruction or hold a short conversation right now?",
+      "type": "single_select",
+      "options": [
+        { "value": "no", "next": "q4_multi" },
+        { "value": "yes", "next": "q5_history" }
+      ]
+    },
+    {
+      "id": "q4_multi",
+      "text": "Any of these present?",
+      "type": "multi_select",
+      "options": [
+        { "value": "fever" },
+        { "value": "new_med" },
+        { "value": "not_eating" },
+        { "value": "fall_head" }
+      ],
+      "rules": [
+        {
+          "id": "rule_fall_head",
+          "requires_any": ["fall_head"],
+          "verdict": "er",
+          "explanation_key": "confusion_er_head_injury"
+        },
+        {
+          "id": "rule_fever_med",
+          "requires_all": ["fever", "new_med"],
+          "requires_none": ["fall_head"],
+          "verdict": "call_nurse",
+          "explanation_key": "confusion_nurse_infection_med"
+        },
+        {
+          "id": "rule_default_caution",
+          "requires_none": ["fall_head"],
+          "verdict": "call_nurse",
+          "explanation_key": "confusion_nurse_unexplained"
+        }
+      ]
+    },
+    {
+      "id": "q5_history",
+      "text": "Has this happened before and resolved on its own within a day?",
+      "type": "single_select",
+      "options": [
+        { "value": "yes", "verdict": "monitor", "explanation_key": "confusion_monitor_resolved" },
+        { "value": "no", "verdict": "call_nurse", "explanation_key": "confusion_nurse_new" }
+      ]
+    }
+  ],
+  "red_flags": [],
+  "verdict_default_if_unmatched": "call_nurse"
+}
