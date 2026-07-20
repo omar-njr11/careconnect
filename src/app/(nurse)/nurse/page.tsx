@@ -7,7 +7,7 @@ const prisma = new PrismaClient();
 
 export default async function NurseDashboard() {
   const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== 'nurse') redirect('/login');
+  if (!session || !session.user || session.user.role !== 'nurse') redirect('/login');
 
   const assignments = await prisma.familyNurseAssignment.findMany({
     where: { nurseId: session.user.id, status: 'active' },
